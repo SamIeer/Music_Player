@@ -60,7 +60,7 @@ if __name__=='__main__':
     end.grid(row=0,column=5)
     #FOR SHOWING TIME
     def play_time():
-          ['text'] = "Playing" + ' - ' + os.path.basename(filename)
+        
 
         file_data = os.path.splitext(filename)
 

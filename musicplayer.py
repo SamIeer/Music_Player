@@ -1,158 +1,225 @@
-#THIS IS MY FIRST PROJECT GONNA MAKE BY MYSELF
-#IN THIS I AM GOING TO MAKE A MUSIC PLAYER 
-from tkinter import*
-from tkinter import ttk,filedialog
-import os 
+import os
+import time
+import random
+from tkinter import Tk, Frame, Label, Button, Listbox, Scrollbar, filedialog, HORIZONTAL, Scale
+from tkinter import ttk
 from pygame import mixer
 from mutagen.mp3 import MP3
-import time
 
-Player=Tk()
+class MusicPlayer:
+    def __init__(self, root):
+        self.root = root
+        self.root.geometry("500x600")
+        self.root.title("FreshTune Pro - Music Player")
+        self.root.configure(bg='#1e1e1e')
 
+        self.playlist = []
+        self.is_paused = False
+        self.current_song_index = None
+        self.is_repeat = False
+        self.is_shuffle = False
 
-if __name__=='__main__':
-    #DEVELOPINFG THE STRUCTURE
-    Player.geometry("450x600")
-    Player.title("FreshTune")
-    Player.configure(bg='light blue')
-    mixer.init()
-    #MAKING A FRAME
-    strut=Frame(Player,)
-    strut.pack(padx=20,pady=20)
-    
-    songs=Frame(Player)
-    songs.pack()
-    play=Frame(Player)
-    play.pack()
-    
-    switch=Frame(Player)
-    switch.pack()
-    #CREATING A SCROLLBAR ATTACH WITH LISTBOX
-    scroll=Scrollbar(strut)
-    scroll.pack(side=RIGHT,fill=Y)
+        self.initialize_mixer()
+        self.setup_ui()
+        self.load_songs_from_predefined_folder()
 
-    
-    #BUILDING A LISTBOX FOR DISPLAYING SONGS AND STORING
-    loot=Listbox(strut,height=20,width=200)
-    
-    
-    #adding songs in lsitbox
-    path=r'C:\Users\hp\OneDrive\Desktop\New folder'
-    index=0
-    playlist=[]
-    for i in os.listdir(path):
-        loot.insert(index,i)
-        new_path=path + '/'+ i
-        playlist.insert(index,new_path)
-        index+=1
-    loot.pack()
-    scroll.config(command=loot.yview)
-    loot.config(yscrollcommand=scroll.set)
-    
-    #SONG DETAITLS
-    song_name=ttk.Label(songs,text='songs playing')
-    song_name.pack(padx=150,pady=10,)
-    
-    start=ttk.Label(play,text="00:00:00")
-    start.grid(row=0,column=0)
-    
-    end=ttk.Label(play,text="00:00:00")
-    end.grid(row=0,column=5)
-    #FOR SHOWING TIME
-    def play_time():
-        
+    def initialize_mixer(self):
+        mixer.init()
+        mixer.music.set_volume(0.5)
 
-        file_data = os.path.splitext(filename)
+    def setup_ui(self):
+        self.setup_song_list()
+        self.setup_labels()
+        self.setup_controls()
+        self.setup_progress_bar()
+        self.setup_volume_control()
+        self.setup_add_song_button()
+        self.setup_repeat_shuffle_buttons()
 
-        if file_data[1] == '.mp3':
-            audio = MP3(filename)
-            total_length = audio.info.length
+    def load_songs_from_predefined_folder(self):
+        folder_path = "\\Music_Player\songs"  # Change this to your actual folder path
+
+        if os.path.exists(folder_path):
+            mp3_files = [os.path.join(folder_path, f) for f in os.listdir(folder_path) if f.endswith(".mp3")]
+
+            if mp3_files:
+               for song in mp3_files:
+                song_name = os.path.basename(song)
+                self.playlist.append(song)  # Store the full path
+                self.song_list.insert('end', song_name)  # Display in Listbox
+                print(f"Loaded {len(mp3_files)} songs from {folder_path}")
+            else:
+                print("No MP3 files found in the predefined folder.")
         else:
-            a = mixer.Sound(filename)
-            total_length = a.get_length()
-
-        # div - total_length/60, mod - total_length % 60
-        mins, secs = divmod(total_length, 60)
-        mins = round(mins)
-        secs = round(secs)
-        timeformat = '{:02d}:{:02d}'.format(mins, secs)
-        lengthlabel['text'] = "Total Length" + ' - ' + timeformat
-
-
-    #CREATING A STATUS BAR
-    statbar=ttk.Progressbar(play,orient=HORIZONTAL,mode='determinate',value=0)
-    statbar.grid(row=0,column=1,columnspan=4,ipadx=40,pady=10,padx=50)
+            print("The specified folder does not exist.")
+ 
     
-    #FOR BUTTONS
-    #function for playing song
-    def play_song():
-        select=loot.curselection()
-        select=int(select[0])
-        playit=playlist[select]
-        song_name.config(text=loot.get("anchor"))
-        mixer.music.load(playit)
-        mixer.music.play()
+
+    def setup_volume_control(self):
+        volume_frame = Frame(self.root, bg='#282c34')
+        volume_frame.pack(pady=10)
+
+        volume_label = Label(volume_frame, text="Volume", bg='#282c34', fg='white', font=("Helvetica", 12))
+        volume_label.grid(row=0, column=0, padx=10)
+
+    # Create volume control slider (Scale)
+        self.volume_scale = Scale(volume_frame, from_=0, to=100, orient=HORIZONTAL, command=self.set_volume, bg='#282c34', fg='white', font=("Helvetica", 12))
+        self.volume_scale.set(50)  # Default volume set to 50%
+        self.volume_scale.grid(row=0, column=1)
+
+    def set_volume(self, value):
+            volume = int(value)
+            mixer.music.set_volume(volume / 100)  # Set volume as a float (0.0 to 1.0)
+            print(f"Volume set to: {volume}%")
+    
+    def setup_add_song_button(self):
+            button_frame = Frame(self.root, bg='#282c34')
+            button_frame.pack(pady=10)
+
+    # Create Add Song button
+            add_song_btn = Button(button_frame, text="Add Song", font=("Helvetica", 12, 'bold'), bg='#3a3f4b', fg='white', command=self.add_song)
+            add_song_btn.grid(row=0, column=0)
+
+    def add_song(self):
+                song = filedialog.askopenfilename(title="Select a song", filetypes=[("MP3 files", "*.mp3")])
+                if song:
+                    self.playlist.append(song)
+                    self.song_list.insert('end', os.path.basename(song))  # Add song name to the Listbox
+                    print(f"Song added: {song}")
+
+    def setup_repeat_shuffle_buttons(self):
+            button_frame = Frame(self.root, bg='#282c34')
+            button_frame.pack(pady=10)
+
+    # Create Repeat button
+            repeat_btn = Button(button_frame, text="Repeat", font=("Helvetica", 12, 'bold'), bg='#3a3f4b', fg='white', command=self.toggle_repeat)
+            repeat_btn.grid(row=0, column=0, padx=10)
+
+    # Create Shuffle button
+            shuffle_btn = Button(button_frame, text="Shuffle", font=("Helvetica", 12, 'bold'), bg='#3a3f4b', fg='white', command=self.toggle_shuffle)
+            shuffle_btn.grid(row=0, column=1, padx=10)
+
+    def toggle_repeat(self):
+                self.is_repeat = not self.is_repeat
+                print(f"Repeat {'Enabled' if self.is_repeat else 'Disabled'}")
+
+    def toggle_shuffle(self):
+                self.is_shuffle = not self.is_shuffle
+                print(f"Shuffle {'Enabled' if self.is_shuffle else 'Disabled'}")
+
+
+    def setup_song_list(self):
+        frame = Frame(self.root, bg='#3a3f4b')
+        frame.pack(pady=10, padx=10, fill='both', expand=True)
         
-    def pause_music():
-        if play_pause_song['text']=="⏸️":
+        self.song_list = Listbox(frame, bg='#404552', fg='white', selectbackground='#ff5733', height=10)
+        self.song_list.pack(side='left', fill='both', expand=True)
+        
+        scrollbar = Scrollbar(frame, command=self.song_list.yview)
+        scrollbar.pack(side='right', fill='y')
+        self.song_list.config(yscrollcommand=scrollbar.set)
+        self.song_list.bind('<Double-1>', lambda event: self.play_song())
+
+    def setup_labels(self):
+        self.song_label = Label(self.root, text='No Song Playing', bg='#282c34', fg='white', font=("Helvetica", 12))
+        self.song_label.pack(pady=10)
+
+    def prev_song(self):
+        """Play the previous song in the playlist."""
+        if self.current_song_index is not None and self.current_song_index > 0:
+            self.play_song(self.current_song_index - 1)
+
+    def toggle_play_pause(self):
+        """Toggle between play and pause."""
+        if self.is_paused:
+            mixer.music.unpause()
+            self.play_pause_btn.config(text="⏸️")  # Change button text to pause icon
+            self.is_paused = False
+        else:
             mixer.music.pause()
-            play_pause_song['text']='▶️'
-        else:
-            play_song()
-            play_pause_song['text']='⏸️'
+            self.play_pause_btn.config(text="▶️")  # Change button text to play icon
+            self.is_paused = True
 
-        # play.grid()
-        # song_name.config(text=loot.get("anchor"))
-        # mixer.music.pause()
+    def next_song(self):
+        """Play the next song in the playlist."""
+        if self.current_song_index is not None and self.current_song_index < len(self.playlist) - 1:
+            if self.is_shuffle:
+                self.play_song(random.randint(0, len(self.playlist) - 1))  # Play random song if shuffle is ON
+            else:
+                self.play_song(self.current_song_index + 1)  # Play the next song
+        elif self.is_repeat:
+            self.play_song(self.current_song_index)  # Replay the current song if repeat is ON
+
+
+    def setup_controls(self):
+        button_frame = Frame(self.root, bg='#282c34')
+        button_frame.pack(pady=10)
+
+        btn_style = {'width': 5, 'height': 2, 'bg': '#3a3f4b', 'fg': 'white', 'font': ('Helvetica', 12, 'bold')}
         
-    def prev_song():
-        prev_music=loot.curselection()
-        prev_music=prev_music[0] - 1
-        prev_song_name=loot.get(prev_music)
-        song_name.config(text=prev_song_name)
-        mixer.music.load(path+'//'+prev_song_name)
-        mixer.music.play()
+        self.prev_btn = Button(button_frame, text="⏮", **btn_style, command=self.prev_song)
+        self.prev_btn.grid(row=0, column=0, padx=10)
         
-        loot.select_clear(0,'end')
-        loot.activate(prev_music)
-        loot.select_set(prev_music)
-    
-    def next_song():
-        next_music=loot.curselection()
-        next_music=next_music[0] + 1
-        next_song_name=loot.get(next_music)
-        song_name.config(text=next_song_name)
-        mixer.music.load(path+'//'+ next_song_name)
-        mixer.music.play()
+        self.play_pause_btn = Button(button_frame, text="▶", **btn_style, command=self.toggle_play_pause)
+        self.play_pause_btn.grid(row=0, column=1, padx=10)
+
         
-        loot.select_clear(0,'end')
-        loot.activate(next_music)
-        loot.select_set(next_music)
+        self.next_btn = Button(button_frame, text="⏭", **btn_style, command=self.next_song)
+        self.next_btn.grid(row=0, column=2, padx=10)
+
+    def setup_progress_bar(self):
+        controls = Frame(self.root, bg='#282c34')
+        controls.pack(pady=10)
+
+        self.start_time = Label(controls, text="00:00", bg='#282c34', fg='white')
+        self.start_time.grid(row=0, column=0)
+        
+        self.progress_bar = ttk.Progressbar(controls, orient=HORIZONTAL, mode='determinate', length=300)
+        self.progress_bar.grid(row=0, column=1, padx=20)
+        
+        self.end_time = Label(controls, text="00:00", bg='#282c34', fg='white')
+        self.end_time.grid(row=0, column=2)
+
+    def update_progress_bar(self):
+        if mixer.music.get_busy():
+            current_time = mixer.music.get_pos() / 1000
+            converted_current_time = time.strftime('%M:%S', time.gmtime(current_time))
+            
+            if self.current_song_index is not None:
+                song = MP3(self.playlist[self.current_song_index])
+                song_length = song.info.length
+                converted_song_length = time.strftime('%M:%S', time.gmtime(song_length))
+                
+                self.start_time.config(text=converted_current_time)
+                self.end_time.config(text=converted_song_length)
+                
+                progress = (current_time / song_length) * 100
+                self.progress_bar.config(value=progress)
+                self.progress_bar.after(1000, self.update_progress_bar)
     
-    def base(val):
-        global voll
-        voll=float(val)/100
-        mixer.music.set_volume(voll)
-    
-    ###########################################################################################################
-    # play=Button(switch,text="▶️",width=4,height=2,bg='light blue',fg='orange',)
-    # play.grid(row=1,column=3,padx=10,pady=10)
-    
-    play_pause_song=Button(switch,text="▶️",width=4,height=2,bg='light blue',fg='orange',command=pause_music)
-    play_pause_song.grid(row=1,column=3,padx=10,pady=10)
-    
-    pre=Button(switch,text="⏮️",width=4,height=2,bg='light blue',fg='orange',command=prev_song)
-    pre.grid(row=1,column=2,padx=10,pady=10)
-    
-    next=Button(switch,text="⏭️",width=4,height=2,bg='light blue',fg='orange',command=next_song)
-    next.grid(row=1,column=4,padx=10,pady=10)
-    
-    #FOR VOLUME
-    speaker=Button(switch,text="🔊",width=4,height=2,bg='light blue',fg='orange',)
-    speaker.grid(row=2,column=2,)
-    
-    vol=Scale(switch,from_=0 ,to=100,orient=HORIZONTAL,bg="light blue",length=150,width=3,sliderlength='5',command=base)
-    vol.set(30)
-    vol.grid(row=2,column=3)
-    
-    Player.mainloop()
+    def play_song(self, index=None):
+        if index is None:
+            selected_song_index = self.song_list.curselection()
+            if selected_song_index:
+                self.current_song_index = int(selected_song_index[0])
+            else:
+                return
+        else:
+            self.current_song_index = index
+        
+        song_path = self.playlist[self.current_song_index]
+        try:
+            mixer.music.load(song_path)
+            mixer.music.play()
+            self.song_label.config(text=self.song_list.get(self.current_song_index), fg='white')
+            self.song_list.selection_clear(0, 'end')
+            self.song_list.activate(self.current_song_index)
+            self.song_list.selection_set(self.current_song_index)
+            self.update_progress_bar()
+        except Exception as e:
+            print(f"Error loading song: {e}")
+
+if __name__ == "__main__":
+    root = Tk()
+    music_player = MusicPlayer(root)
+    root.mainloop()

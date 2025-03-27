@@ -6,6 +6,17 @@ from tkinter import ttk
 from pygame import mixer
 from mutagen.mp3 import MP3
 
+from songbase import add_song, get_all_songs
+
+# Example: Adding a song
+add_song("Song Name", "C:/Users/hp/Music/song.mp3")
+
+# Example: Fetching all songs
+songs = get_all_songs()
+for song in songs:
+    print(f"ID: {song[0]}, Title: {song[1]}, Path: {song[2]}")
+
+
 class MusicPlayer:
     def __init__(self, root):
         self.root = root

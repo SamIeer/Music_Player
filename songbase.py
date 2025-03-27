@@ -1,40 +1,38 @@
 import sqlite3
 
-# Function to connect to the database
-def connect_db():
-    conn = sqlite3.connect("music_player.db")
-    return conn
+# Connect to SQLite Database (Creates the file if it doesn't exist)
+conn = sqlite3.connect("musicplayer.db")
+cursor = conn.cursor()
 
-# Function to create the songs table if not exists
-def create_table():
-    conn = connect_db()
-    cursor = conn.cursor()
-    cursor.execute('''
-        CREATE TABLE IF NOT EXISTS songs (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            title TEXT NOT NULL,
-            file_path TEXT NOT NULL
-        )
-    ''')
-    conn.commit()
-    conn.close()
+# Create the 'songs' table
+cursor.execute("""
+    CREATE TABLE IF NOT EXISTS songs (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        title TEXT NOT NULL,
+        path TEXT NOT NULL UNIQUE
+    )
+""")
+conn.commit()
 
-# Function to add a new song
-def add_song(title, file_path):
-    conn = connect_db()
-    cursor = conn.cursor()
-    cursor.execute("INSERT INTO songs (title, file_path) VALUES (?, ?)", (title, file_path))
-    conn.commit()
-    conn.close()
+def add_song(title, path):
+    """Add a song to the database."""
+    try:
+        cursor.execute("INSERT INTO songs (title, path) VALUES (?, ?)", (title, path))
+        conn.commit()
+        print(f"Added song: {title}")
+    except sqlite3.IntegrityError:
+        print("Song already exists in the database.")
 
-# Function to fetch all songs
 def get_all_songs():
-    conn = connect_db()
-    cursor = conn.cursor()
+    """Fetch all songs from the database."""
     cursor.execute("SELECT * FROM songs")
-    songs = cursor.fetchall()
-    conn.close()
-    return songs
+    return cursor.fetchall()
 
-# Create table when the script runs
-create_table()
+def delete_song(song_id):
+    """Delete a song from the database."""
+    cursor.execute("DELETE FROM songs WHERE id = ?", (song_id,))
+    conn.commit()
+    print(f"Deleted song with ID: {song_id}")
+
+# Close the connection when done (not needed in script mode)
+# conn.close()

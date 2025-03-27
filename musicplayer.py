@@ -47,6 +47,19 @@ class MusicPlayer:
         self.setup_add_song_button()
         self.setup_repeat_shuffle_buttons()
 
+    # Change this path to your songs folder
+    songs_folder = r"C:\Users\hp\OneDrive\Desktop\#PROJECTS\py.projects\Music_Player\songs"
+
+    # Get all MP3 files from the folder
+    mp3_files = [f for f in os.listdir(songs_folder) if f.endswith('.mp3')]
+
+    # Add each song to the database
+    for song in mp3_files:
+        song_path = os.path.join(songs_folder, song)
+        add_song(song, song_path)
+
+    print("All songs have been added to the database!")
+
     def load_songs_from_predefined_folder(self):
         folder_path = "\\Music_Player\songs"  # Change this to your actual folder path
 
@@ -92,11 +105,12 @@ class MusicPlayer:
             add_song_btn.grid(row=0, column=0)
 
     def add_song(self):
-                song = filedialog.askopenfilename(title="Select a song", filetypes=[("MP3 files", "*.mp3")])
-                if song:
-                    self.playlist.append(song)
-                    self.song_list.insert('end', os.path.basename(song))  # Add song name to the Listbox
-                    print(f"Song added: {song}")
+        """Add a new song and store it in the database."""
+        song_path = filedialog.askopenfilename(title="Select a song", filetypes=[("MP3 files", "*.mp3")])
+        if song_path:
+            song_name = os.path.basename(song_path)
+            add_song(song_name, song_path)  # Store in database
+            self.load_songs_from_database()  # Refresh GUI with new song
 
     def setup_repeat_shuffle_buttons(self):
             button_frame = Frame(self.root, bg='#282c34')
@@ -120,16 +134,18 @@ class MusicPlayer:
 
 
     def setup_song_list(self):
-        frame = Frame(self.root, bg='#3a3f4b')
-        frame.pack(pady=10, padx=10, fill='both', expand=True)
-        
-        self.song_list = Listbox(frame, bg='#404552', fg='white', selectbackground='#ff5733', height=10)
-        self.song_list.pack(side='left', fill='both', expand=True)
-        
-        scrollbar = Scrollbar(frame, command=self.song_list.yview)
-        scrollbar.pack(side='right', fill='y')
-        self.song_list.config(yscrollcommand=scrollbar.set)
-        self.song_list.bind('<Double-1>', lambda event: self.play_song())
+       frame = Frame(self.root, bg='#3a3f4b')
+       frame.pack(pady=10, padx=10, fill='both', expand=True)
+    
+       self.song_list = Listbox(frame, bg='#404552', fg='white', selectbackground='#ff5733', height=10)
+       self.song_list.pack(side='left', fill='both', expand=True)
+    
+       scrollbar = Scrollbar(frame, command=self.song_list.yview)
+       scrollbar.pack(side='right', fill='y')
+       self.song_list.config(yscrollcommand=scrollbar.set)
+       self.song_list.bind('<Double-1>', lambda event: self.play_song())
+
+       self.load_songs_from_database()  # Load songs when the player starts
 
     def setup_labels(self):
         self.song_label = Label(self.root, text='No Song Playing', bg='#282c34', fg='white', font=("Helvetica", 12))
@@ -208,6 +224,18 @@ class MusicPlayer:
                 self.progress_bar.config(value=progress)
                 self.progress_bar.after(1000, self.update_progress_bar)
     
+    def load_songs_from_database(self):
+        """Fetch songs from the database and add them to the playlist & GUI."""
+        songs = get_all_songs()
+        self.playlist = []  # Reset playlist
+        self.song_list.delete(0, 'end')  # Clear existing list
+
+        for song in songs:
+            song_id, title, path = song
+            self.playlist.append(path)
+            self.song_list.insert('end', title)  # Show only title in the GUI
+        print(f"Loaded {len(songs)} songs from database.")
+
     def play_song(self, index=None):
         if index is None:
             selected_song_index = self.song_list.curselection()
